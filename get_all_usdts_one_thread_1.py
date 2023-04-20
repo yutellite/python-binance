@@ -7,6 +7,28 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 from mplfinance import make_marketcolors, make_mpf_style
+import psutil
+import os
+
+def limit_memory(max_mem):
+  """限制脚本最大内存使用量"""
+  process = psutil.Process(os.getpid())
+  available_mem = psutil.virtual_memory().available
+  max_mem_bytes = int(max_mem * available_mem)
+  if hasattr(process, 'rlimit'):
+      # 在Linux/MacOS上使用rlimit方法
+      # RLIMIT_DATA: 数据段的最大大小
+      # RLIMIT_AS: 进程地址空间（堆栈、数据段、共享库等）的最大大小
+      # RLIM_INFINITY: 表示无限制
+      process.rlimit(psutil.RLIMIT_DATA, (max_mem_bytes, max_mem_bytes))
+      process.rlimit(psutil.RLIMIT_AS, (max_mem_bytes, max_mem_bytes))
+  else:
+      # 在Windows上使用memory_info方法
+      process.memory_info().rss
+
+# 限制内存使用量为2GB
+# limit_memory(2)
+
 
 # 请填入自己的 API key 和 secret
 api_key = 'kZlXOJYbnndBNpaSZrZpSTsmUSGcGW7MeBYVVMESriPyzN6o78Q2zxdj6VI014WS'
@@ -20,12 +42,12 @@ tickers = client.get_all_tickers()
 # 筛选出所有以 USDT 作为计价货币的交易对
 usdt_pairs = [ticker for ticker in tickers if ticker['symbol'].endswith('USDT')]
 
-# 第二个时间段的起止时间
-start_time = '2020-10-01 00:00:00'
-end_time = 'now'
-
 # 创建一个锁对象
 global_lock = threading.Lock()
+
+# 第二个时间段的起止时间
+start_time = '2022-10-01 00:00:00'
+end_time = 'now'
 
 class MyThread(threading.Thread):
   def __init__(self, name, paris):
@@ -106,9 +128,8 @@ class MyThread(threading.Thread):
               volume=True, figratio=(21, 9), figsize=(40.96, 21.6), returnfig=True)
 
       # dpi 参数设置为 100，表示图像的每英寸点数为 100。
-      dpi = 100
-      # 减少 dpi 以加速
-      # dpi = 440
+      # dpi = 100
+      dpi = 440
       fig.savefig('./output_1/' + pair + '_candle.png', dpi=dpi)
 
       # 保存 csv 格式文件
@@ -134,7 +155,7 @@ threads = []
 # 新列表；当 i=1 时，usdt_pairs[i::8] 就表示从列表 usdt_pairs 的第 1 个元素开始，
 # 每隔 8 个元素取一个元素，得到的就是第 1、第 9、第 17 个元素组成的新列表，以此类推。
 chunk_size = len(usdt_pairs) // 8
-for i in range(4):
+for i in range(1):
   start = i * chunk_size
   end = start + chunk_size
   if i == 7:

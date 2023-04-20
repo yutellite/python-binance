@@ -3,6 +3,7 @@ import mplfinance as mpf
 from mplfinance import make_marketcolors, make_mpf_style
 from binance.client import Client
 from binance.enums import *
+import matplotlib.pyplot as plt
 
 # 请填入自己的 API key 和 secret
 api_key = 'kZlXOJYbnndBNpaSZrZpSTsmUSGcGW7MeBYVVMESriPyzN6o78Q2zxdj6VI014WS'
@@ -18,14 +19,12 @@ usdt_pairs = [ticker for ticker in tickers if ticker['symbol'].endswith('USDT')]
 
 # 遍历所有 USDT 交易对并获取其蜡烛图数据
 #symbol='BTCUSDT'
-symbol='EOSUSDT'
-#symbol='DYDXUSDT'
-#symbol='FILUSDT'
+symbol='FILUSDT'
 print(f"Processing {symbol}...")
 
 # 第一个时间段的起止时间
-start_time1 = '2019-1-1 00:00:00'
-end_time1 = '2020-1-1 23:59:59'
+start_time1 = '2018-10-01 00:00:00'
+end_time1 = '2019-10-31 23:59:59'
 
 # 第二个时间段的起止时间
 start_time2 = '2022-10-01 00:00:00'
@@ -40,7 +39,7 @@ pair = symbol
 
 # 获取第二个时间段的 k 线数据
 klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1DAY,
-  start_time1, end_time1)
+  start_time1, "now")
 
 # klines = client.get_historical_klines(pair, Client.KLINE_INTERVAL_1DAY, "1 Jan, 2022", "now")
 df = pd.DataFrame(klines, columns=[
@@ -97,7 +96,31 @@ fig, ax = mpf.plot(data, type='candle', mav=(7, 25, 99), style=style,
 
 # dpi 参数设置为 1000，表示图像的每英寸点数为 100。
 dpi = 440
-fig.savefig(symbol+'_1.png', dpi=dpi)
+fig.savefig(symbol+'_2.png', dpi=dpi)
 
 # 保存 csv 格式文件
-df.to_csv(f'test_data.csv', index=False)
+#df.to_csv(f'{pair}.csv', index=False)
+
+def plot_candlestick(data):
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(bottom=0.2)
+    mpf.candlestick2_ochl(ax, data['Open'], data['Close'], data['High'], data['Low'], width=0.5, colorup='r', colordown='g', alpha=0.6)
+
+    def on_scroll(event):
+        # 获取当前y轴范围
+        ymin, ymax = ax.get_ylim()
+        # 获取滚轮滚动方向，向上滚动为1，向下滚动为-1
+        direction = 1 if event.button == 'up' else -1
+        # 计算纵轴范围的新值
+        dy = (ymax - ymin) * 0.1 * direction
+        ymin_new = ymin - dy
+        ymax_new = ymax + dy
+        # 更新y轴范围
+        ax.set_ylim(ymin_new, ymax_new)
+        # 重新绘制图形
+        fig.canvas.draw()
+
+    # 注册滚轮事件处理函数
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+    
+    plt.show()
